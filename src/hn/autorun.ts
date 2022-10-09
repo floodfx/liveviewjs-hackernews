@@ -32,7 +32,7 @@ function build_failure(error: unknown) {
 // Build / watch the client code
 esbuild
   .build({
-    entryPoints: ["src/client/index.ts", "src/client/webcomponents/index.ts"],
+    entryPoints: ["src/client/index.ts"],
     outdir: "public/js",
     bundle: true,
     format: "esm",

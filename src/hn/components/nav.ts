@@ -25,7 +25,7 @@ export function Nav(isIndex: boolean) {
 }
 
 function patchOrRedirect(isIndex: boolean, content: LiveViewTemplate, path: string) {
-  if (isIndex) {
+  if (!isIndex) {
     return html`<a href="${path}">${content}</a>`;
   }
   return live_patch(content, { to: { path } });

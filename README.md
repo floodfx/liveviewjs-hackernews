@@ -11,3 +11,8 @@ This is a simple HackerNews clone built with [LiveViewJS](https://liveviewjs.com
 * Open `http://localhost:4002` in your browser
 
 More info on LiveViewJS can be found on the [website](https://liveviewjs.com) and [GitHub](https://github.com/floodfx/liveviewjs).
+
+
+## Gratitude
+* Thanks to [Ryan Caniato](https://github.com/ryansolid) for the HN Clone starting point
+* Thanks to [JLarky](https://github.com/jlarky) for the feedback / code improvements
