@@ -28,7 +28,6 @@ export const htmlPageTemplate: LiveViewHtmlPageTemplate = (
         <meta name="csrf-token" content="${csrfToken}" />
         ${live_title_tag(title, { prefix, suffix })}
         <script defer type="text/javascript" src="/js/index.js"></script>
-        <script type="module" src="/js/webcomponents/index.js"></script>
         <link rel="stylesheet" href="/css/global.css" />
       </head>
       <body>
