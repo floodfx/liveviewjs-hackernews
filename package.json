@@ -1,9 +1,13 @@
 {
-  "name": "node-starter",
+  "name": "liveviewjs-hackernews",
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "ts-node ./src/hn/autorun.ts",
+    "start": "node ./build/index.js",
+    "dev": "ts-node ./src/hn/autorun.ts",    
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "esbuild ./src/client/index.ts --bundle --outdir=public/js --platform=browser --format=esm --minify --sourcemap",
+    "build:server": "esbuild ./src/hn/index.ts --bundle --outdir=build --platform=node --format=cjs --minify --sourcemap",
     "clean": "rm -rf build; rm -rf dist"
   },
   "dependencies": {
