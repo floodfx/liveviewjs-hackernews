@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, onValue, ref } from "firebase/database";
 import { SingleProcessPubSub } from "liveviewjs";
+import fetch from "node-fetch";
 import { HNItem, HNUser } from "./hn/types";
 
 // HN Firebase config
@@ -70,7 +71,7 @@ export async function getAll(ids: number[], loadChildren: boolean = false): Prom
  * @returns the item
  */
 export async function getItem(id: number, loadChildren: boolean = false): Promise<HNItem> {
-  const i = await get<HNItem>(`/v0/item/${id}`);
+  const i = await get<HNItem>(`${config.databaseURL}/v0/item/${id}.json`);
   if (loadChildren && i.kids) {
     i.children = await getAll(i.kids, loadChildren);
   }
@@ -83,7 +84,7 @@ export async function getItem(id: number, loadChildren: boolean = false): Promis
  * @returns a User
  */
 export function getUser(id: string): Promise<HNUser> {
-  return get<HNUser>(`/v0/user/${id}`);
+  return get<HNUser>(`${config.databaseURL}/v0/user/${id}.json`);
 }
 
 /**
@@ -95,16 +96,22 @@ export function getUser(id: string): Promise<HNUser> {
 export async function getItems(type: ItemTypes, page: number): Promise<HNItem[]> {
   const p = Math.max(1, Math.min(page, maxPage(type))); // clamp page to 1..pmax
   const t = mapStories[type];
-  let items = await get<number[]>(`/v0/${t}`);
+  let items = await get<number[]>(`${config.databaseURL}/v0/${t}.json`);
   items = items.slice((p - 1) * 20, p * 20); // slice items for page
   return getAll(items);
 }
 
-async function get<T>(path: string): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const item = ref(database, path);
-    onValue(item, (snapshot) => {
-      resolve(snapshot.val() as T);
-    });
-  });
+// helper function to fetch a json resource
+async function get<T>(href: string): Promise<T> {
+  // calling firebase directly seems flaky so retry a few times
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const res = await fetch(href);
+      return res.json() as T;
+    } catch (e) {
+      retries--;
+    }
+  }
+  throw new Error("failed to fetch " + href);
 }
