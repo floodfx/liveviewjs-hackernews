@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node ./build/index.js",
-    "dev": "ts-node ./src/hn/autorun.ts",    
+    "dev": "ts-node ./src/hn/autorun.ts",
+    "debug": "ts-node ./src/firebase.ts",
     "build": "npm run build:client && npm run build:server",
     "build:client": "esbuild ./src/client/index.ts --bundle --outdir=public/js --platform=browser --format=esm --minify --sourcemap",
     "build:server": "esbuild ./src/hn/index.ts --bundle --outdir=build --platform=node --format=cjs --minify --sourcemap",
@@ -18,7 +19,7 @@
     "jsonwebtoken": "^8.5.1",
     "liveviewjs": "^0.7.5",
     "nanoid": "^3.2.0",
-    "node-fetch": "^3.2.10",
+    "node-fetch": "^2.6.7",
     "topbar": "^1.0.1",
     "ws": "^8.8.1"
   },
@@ -27,6 +28,7 @@
     "@types/express-session": "^1.17.4",
     "@types/jsonwebtoken": "^8.5.8",
     "@types/node": "^18.7.8",
+    "@types/node-fetch": "^2.6.2",
     "@types/phoenix": "^1.5.4",
     "@types/phoenix_live_view": "^0.15.1",
     "@types/ws": "^8.5.3",
