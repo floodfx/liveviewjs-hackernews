@@ -108,7 +108,7 @@ async function get<T>(href: string): Promise<T> {
   while (retries > 0) {
     try {
       const res = await fetch(href);
-      return res.json() as T;
+      return (await res.json()) as T;
     } catch (e) {
       retries--;
     }
