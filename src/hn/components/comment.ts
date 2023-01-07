@@ -6,13 +6,17 @@ import { HNItem } from "../types";
  * to toggle the visibility of the comment and it's children.
  */
 export function Comment(item: HNItem): LiveViewTemplate {
-  const { by, kids, text, children, time_ago } = new HNItem(item);
+  const { by, kids, text, visibleChildren, time_ago, deleted, dead } = new HNItem(item);
   const kids_count = kids?.length || 0;
   const comment_id = "comment_" + item.id;
   const id = "toggle_" + item.id;
   const c_id = "children_" + item.id;
+  if (dead || deleted) {
+    return html``;
+  }
+
   return html`
-    <li class="comment">
+    <li id="c-${item.id}" class="comment">
       <div>
         <a class="by" href="/users/${by}">${by}</a> ${time_ago}
         <span class="toggle open" id=${id}>
@@ -28,7 +32,7 @@ export function Comment(item: HNItem): LiveViewTemplate {
           ${kids_count > 0
             ? html`
                 <ul class="comment-children" id=${c_id}>
-                  ${renderComments(children!)}
+                  ${renderComments(visibleChildren!)}
                 </ul>
               `
             : html``}

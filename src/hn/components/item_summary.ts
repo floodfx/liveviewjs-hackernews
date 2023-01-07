@@ -6,11 +6,12 @@ import { HNItem } from "../types";
  * item types: top, new, best, show, ask, job.
  */
 export function ItemSummary(item: HNItem) {
-  const { id, url, score, title, type, by, kids, domain, time_ago } = new HNItem(item);
-  const kids_count = kids?.length || 0;
+  const { id, url, score, title, type, by, domain, time_ago, commentCount } = new HNItem(item);
   return html`
     <li class="news-item">
-      ${type === "job" ? html`` : html`<span class="score">${score}</span>`}
+      ${type === "job"
+        ? html``
+        : html`<span id="story-score-${id}" class="score" phx-hook="HighlightChange">${score}</span>`}
       <span class="title">
         ${url && !url.startsWith("item?id=")
           ? html`      
@@ -26,7 +27,9 @@ export function ItemSummary(item: HNItem) {
       <span class="meta">
         ${type !== "job"
           ? html` by <a href="/users/${by}">${by}</a> ${time_ago} |
-              <a href="/stories/${id}"> ${kids_count ? `${kids_count} comments` : "discuss"} </a>`
+              <a id="comment-link-${id}" href="/stories/${id}" phx-hook="HighlightChange"
+                >${commentCount > 0 ? `${commentCount} comments` : "discuss"}
+              </a>`
           : html`<a href="/stories/${id}">${time_ago}</a>`}
       </span>
       ${type === "job" ? html`<span class="label">${type}</span>` : html``}

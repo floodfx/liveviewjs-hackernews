@@ -1,7 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, onValue, ref } from "firebase/database";
 import { SingleProcessPubSub } from "liveviewjs";
-import fetch from "node-fetch";
 import { HNItem, HNUser } from "./hn/types";
 
 // HN Firebase config
@@ -15,19 +14,7 @@ const app = initializeApp(config);
 var database = getDatabase(app);
 const pubSub = new SingleProcessPubSub();
 
-// listen for liveview subscription requests.  the itemLV mount function
-// will broadcast a message to the pubsub channel 'item-update' with the
-// item id to subscribe to.  we use the firebase database to subscribe to
-// updates to that item and then publish those updates to the pubsub channel
-// 'item-<id>' which is the channel that the itemLV is subscribed to.
-pubSub.subscribe("item-update", (id) => {
-  const item = ref(database, "v0/item/" + id);
-  onValue(item, () => {
-    pubSub.broadcast("item-" + id, { type: "item-update" });
-  });
-});
-
-const mapStories: { [key: string]: string } = {
+const mapStories = {
   top: "topstories",
   new: "newstories",
   best: "beststories",
@@ -36,14 +23,14 @@ const mapStories: { [key: string]: string } = {
   job: "jobstories",
 };
 
-type ItemTypes = keyof typeof mapStories;
+export type StoryTypes = keyof typeof mapStories;
 
 /**
  * Determine max number of pages for a given item type
  * @param type one of top, new, best, show, ask, job
  * @returns the max number of pages for that type
  */
-export function maxPage(type: ItemTypes): number {
+export function maxPage(type: StoryTypes): number {
   let pmax = 25; // top/news/best 20 items per page x 25 pages = 500 items
   if (type === "show" || type === "ask" || type === "job") {
     pmax = 10; // show/ask/job 20 items per page x 10 pages = 200 items
@@ -71,7 +58,7 @@ export async function getAll(ids: number[], loadChildren: boolean = false): Prom
  * @returns the item
  */
 export async function getItem(id: number, loadChildren: boolean = false): Promise<HNItem> {
-  const i = await get<HNItem>(`${config.databaseURL}/v0/item/${id}.json`);
+  const i = await get<HNItem>("item", id.toString());
   if (loadChildren && i.kids) {
     i.children = await getAll(i.kids, loadChildren);
   }
@@ -84,7 +71,7 @@ export async function getItem(id: number, loadChildren: boolean = false): Promis
  * @returns a User
  */
 export function getUser(id: string): Promise<HNUser> {
-  return get<HNUser>(`${config.databaseURL}/v0/user/${id}.json`);
+  return get<HNUser>("user", id);
 }
 
 /**
@@ -93,25 +80,41 @@ export function getUser(id: string): Promise<HNUser> {
  * @param page a page number clamp to 1..maxPage (see maxPage)
  * @returns the list of items (without children loaded)
  */
-export async function getItems(type: ItemTypes, page: number): Promise<HNItem[]> {
+export async function getItems(type: StoryTypes, page: number): Promise<HNItem[]> {
   const p = Math.max(1, Math.min(page, maxPage(type))); // clamp page to 1..pmax
-  const t = mapStories[type];
-  let items = await get<number[]>(`${config.databaseURL}/v0/${t}.json`);
+  const stories = mapStories[type];
+  let items = await get<number[]>(stories);
   items = items.slice((p - 1) * 20, p * 20); // slice items for page
   return getAll(items);
 }
 
-// helper function to fetch a json resource
-async function get<T>(href: string): Promise<T> {
-  // calling firebase directly seems flaky so retry a few times
-  let retries = 3;
-  while (retries > 0) {
+/**
+ * Fetch the data from firebase for a given type and optionally an id
+ * @param type a type of item (e.g. user, item, or story type)
+ * @param id optional id of the item
+ * @returns results of the firebase query
+ */
+async function get<T>(type: "user" | "item" | string, id?: string): Promise<T> {
+  return new Promise((resolve, reject) => {
     try {
-      const res = await fetch(href);
-      return (await res.json()) as T;
+      const lastPart = id ? `/${id}` : "";
+      const path = `/v0/${type}${lastPart}`;
+      const item = ref(database, path);
+      onValue(item, (snapshot) => {
+        resolve(snapshot.val() as T);
+      });
     } catch (e) {
-      retries--;
+      reject(e);
     }
-  }
-  throw new Error("failed to fetch " + href);
+  });
+}
+
+// listen for liveview subscription requests. we use the firebase database to subscribe to
+// updates to that item and then publish those updates to the pubsub channel
+// 'item-<id>' which is the channel that the item liveview is subscribed to.
+export function listenForItemUpdates(id: number) {
+  const item = ref(database, "v0/item/" + id);
+  onValue(item, () => {
+    pubSub.broadcast("item-" + id, { type: "item-update", id });
+  });
 }

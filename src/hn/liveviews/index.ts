@@ -1,13 +1,16 @@
 import { createLiveView, html, live_patch, safe } from "liveviewjs";
-import { getItems, maxPage } from "src/hn-api";
+import { getItem, getItems, listenForItemUpdates, maxPage, StoryTypes } from "src/hn-api";
 import { ItemSummary } from "../components/item_summary";
 import { Nav } from "../components/nav";
 import { HNItem } from "../types";
 
+/**
+ * Shape of the context for the index liveview.
+ */
 type IndexContext = {
   items: HNItem[];
   page: number;
-  itemType: string;
+  storyType: StoryTypes;
 };
 
 /**
@@ -15,35 +18,54 @@ type IndexContext = {
  * and pagination.
  */
 export const indexLV = createLiveView<IndexContext>({
+  // mount is called when the liveview is first created
+  // both for http and websocket requests
   mount: async (socket, session, params) => {
-    const itemType = (params.type as string) ?? "top";
-    socket.assign({ items: [], page: 0, itemType });
+    const storyType = (params.type as StoryTypes) ?? "top";
+    socket.assign({ items: [], page: 0, storyType });
   },
+  // handleParams is called when the liveview is mounted
+  // and any time the url changes
   handleParams: async (url, socket) => {
     // extract first part of path for item type
-    let itemType = url.pathname.split("/")[1];
-    if (itemType.length === 0) {
-      itemType = socket.context.itemType;
+    let storyType = url.pathname.split("/")[1] as StoryTypes;
+    if (storyType.length === 0) {
+      storyType = socket.context.storyType;
     }
+    // load the items for the page
     let page = +(url.searchParams.get("page") || 1);
-    const items = await getItems(itemType, page);
-    socket.assign({ items, page, itemType });
+    const items = await getItems(storyType, page);
+    // subscribe to item updates
+    items.forEach((item) => {
+      socket.subscribe("item-" + item.id);
+      listenForItemUpdates(item.id);
+    });
+    socket.assign({ items, page, storyType });
   },
+  // handleInfo is called when the liveview receives an update
+  // from the item subscriptions
+  handleInfo: async (info, socket) => {
+    const { id } = info;
+    const item = await getItem(id, false);
+    const items = socket.context.items.map((i) => (i.id === id ? item : i));
+    socket.assign({ items });
+  },
+  // render is called after handleParams
   render: async (context) => {
-    const { items, page, itemType } = context;
-    const max = maxPage(itemType);
+    const { items, page, storyType } = context;
+    const max = maxPage(storyType);
     return html`
       ${Nav(true)}
       <div class="news-view">
         <div class="news-list-nav">
-          ${navHelper(page > 1, "&lt; prev", itemType, page - 1)}
+          ${navHelper(page > 1, "&lt; prev", storyType, page - 1)}
           <span>page ${page}</span>
-          ${navHelper(page < max, "more &gt;", itemType, page + 1)}
+          ${navHelper(page < max, "more &gt;", storyType, page + 1)}
         </div>
         <main class="news-list">
           ${items.length > 0 &&
           html`
-            <ul>
+            <ul id="the-items">
               ${items.map(ItemSummary)}
             </ul>
           `}
