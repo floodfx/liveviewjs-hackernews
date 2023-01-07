@@ -1,5 +1,5 @@
-import { createLiveView, html, LiveViewTemplate, SingleProcessPubSub } from "liveviewjs";
-import { getItem } from "src/hn-api";
+import { createLiveView, html, LiveViewTemplate } from "liveviewjs";
+import { getItem, listenForItemUpdates } from "src/hn-api";
 import { Comment } from "../components/comment";
 import { Nav } from "../components/nav";
 import { HNItem } from "../types";
@@ -8,14 +8,13 @@ type Context = {
   item: HNItem;
 };
 
-// helper to allow this liveview to listen for item updates
-const pubSub = new SingleProcessPubSub();
-
 /**
  * Renders a single item (story, job, comment, etc) and subscribes to
  * updates to the item.
  */
 export const itemLV = createLiveView<Context>({
+  // mount is called for both the http and websocket requests
+  // but only once per request type
   mount: async (socket, _, params) => {
     const item = await getItem(+params.id, true);
     socket.pageTitle(item.title);
@@ -23,13 +22,18 @@ export const itemLV = createLiveView<Context>({
     // subscribe to update for this item
     socket.subscribe("item-" + item.id);
     // tell the api to send updates for this item
-    pubSub.broadcast("item-update", item.id);
+    listenForItemUpdates(item.id);
   },
+  // handleInfo is called when the liveview receives an update
+  // from the item subscription
   handleInfo: async (info, socket) => {
-    // refect the item when we get updates from the api
+    // we don't actually look at the info message since we
+    // already have the item id in the context
     const item = await getItem(+socket.context.item.id, true);
     socket.assign({ item });
   },
+  // render is called initially after mount then subsequently
+  // after handleInfo
   render: (context) => {
     const { item } = context;
     switch (item.type) {
@@ -50,8 +54,7 @@ function withNav(t: LiveViewTemplate) {
 }
 
 function Item(item: HNItem) {
-  const { url, title, score, by, kids, children, domain, time_ago } = new HNItem(item);
-  const kids_count = kids?.length || 0;
+  const { url, title, score, by, visibleChildren, domain, time_ago, commentCount } = new HNItem(item);
   return html`
     <div class="item-view">
       <div class="item-view-header">
@@ -60,16 +63,19 @@ function Item(item: HNItem) {
               <h1>${title}</h1>
             </a>`
           : html`<h1>${title}</h1>`}
-        ${domain && html` <span class="host">${domain}</span> `}
+        ${domain && html`<span class="host">${domain}</span>`}
         <p class="meta">
-          ${score} points | by <a href="/users/${by}">${by}</a>
-          ${time_ago} ago
+          <span id="meta_score" phx-hook="HighlightChange">${score}</span> points | by
+          <a href="/users/${by}">${by}</a>
+          ${time_ago}
         </p>
       </div>
       <div class="item-view-comments">
-        <p class="item-view-comments-header">${kids_count > 0 ? kids_count + " comments" : "No comments yet."}</p>
+        <p id="comment_count" class="item-view-comments-header" phx-hook="HighlightChange">
+          ${commentCount > 0 ? commentCount + " comments" : "No comments yet."}
+        </p>
         <ul class="comment-children">
-          ${!!children ? children.map((c: HNItem) => Comment(c)) : html``}
+          ${visibleChildren ? visibleChildren.map((c: HNItem) => Comment(c)) : html``}
         </ul>
       </div>
     </div>

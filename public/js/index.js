@@ -5133,11 +5133,31 @@ var TransitionSet = class {
 
 // src/client/index.ts
 var import_topbar = __toESM(require_topbar_min());
+function highlight(element) {
+  element.style.background = "yellow";
+  var timer = setInterval(function() {
+    element.style.background = "transparent";
+    clearInterval(timer);
+  }, 2e3);
+}
+var Hooks2 = {
+  HighlightChange: {
+    beforeUpdate() {
+      this.val = this.el.innerText;
+    },
+    updated() {
+      if (this.val !== this.el.innerText) {
+        highlight(this.el);
+      }
+    }
+  }
+};
 var url = "/live";
 var _a;
 var csrfToken = (_a = document.querySelector("meta[name='csrf-token']")) == null ? void 0 : _a.getAttribute("content");
 var liveSocket = new LiveSocket(url, Socket, {
-  params: { _csrf_token: csrfToken }
+  params: { _csrf_token: csrfToken },
+  hooks: Hooks2
 });
 import_topbar.default.config({ barColors: { 0: "#29d" }, shadowColor: "rgba(0, 0, 0, .3)" });
 var topBarScheduled = void 0;

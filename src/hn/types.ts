@@ -40,7 +40,7 @@ export interface HNItem {
   score: number;
   title: string;
   parts: number[];
-  descendants: number;
+  descendants?: number;
   children?: HNItem[];
 }
 
@@ -59,6 +59,14 @@ export class HNItem {
 
   get time_ago() {
     return this.#time_ago;
+  }
+
+  get commentCount(): number {
+    return this.descendants ?? 0;
+  }
+
+  get visibleChildren(): HNItem[] {
+    return this.children?.filter((c) => !c.deleted && !c.dead && c.by !== undefined) ?? [];
   }
 }
 
