@@ -11,12 +11,12 @@
     "clean": "rm -rf build; rm -rf dist"
   },
   "dependencies": {
-    "@liveviewjs/express": "^0.8.1",
+    "@liveviewjs/express": "^0.8.2",
     "express": "^4.17.2",
     "express-session": "^1.17.2",
     "firebase": "^9.11.0",
     "jsonwebtoken": "^8.5.1",
-    "liveviewjs": "^0.8.1",
+    "liveviewjs": "^0.8.2",
     "nanoid": "^3.2.0",
     "node-fetch": "^3.2.10",
     "topbar": "^1.0.1",

@@ -85,5 +85,5 @@ liveViewWsMiddleware(wsServer);
 // listen for requests
 const port = process.env.PORT || 4002;
 httpServer.listen(port, () => {
-  console.log(`LiveViewJS Express is listening on port ${port}!`);
+  console.log(`LiveViewJS Hackernews is live, http://localhost:${port}!`);
 });
